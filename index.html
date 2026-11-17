@@ -61,10 +61,11 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
 import * as ort from 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/ort.min.mjs';
 import { Recognizer } from './asr.mjs';
 // ===== CẤU HÌNH =====
-// Dán link CSV của Google Sheet (Tệp > Chia sẻ > Xuất bản lên web > CSV) vào đây.
+// Dán link Google Sheet bình thường (link đang mở trên thanh địa chỉ) vào đây.
+// Sheet phải để chế độ: Chia sẻ > Bất kỳ ai có đường liên kết > Người xem. (Link CSV xuất bản lên web cũng dùng được.)
 // Sheet có 3 cột, dòng 1 là tiêu đề: chu_de | cau | nghia
 // Viết số bằng chữ (ví dụ "hai nghìn"), không dùng chữ số hay ký hiệu đặc biệt.
-const SHEET_CSV = '';
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1JHK1GFetL5xZchLkCRhDx7a_OuM7VEcJNkITi1CbzuQ/edit?gid=0#gid=0';
 
 // Gói câu có sẵn: [câu tiếng Việt, nghĩa tiếng Anh]
 const PACKS = {
@@ -145,12 +146,20 @@ function fillPacks() {
   $('pack').innerHTML = '<option value="*">Tất cả / All</option>' + Object.keys(PACKS).map(k => `<option>${k}</option>`).join('');
   if (keep && [...$('pack').options].some(o => o.value == keep)) $('pack').value = keep;
 }
+function sheetUrls(u) {
+  const m = u.match(/\/spreadsheets\/d\/([\w-]+)/);
+  if (!m || /\/pub\?|output=csv/.test(u)) return [u];            // link CSV xuất bản: dùng nguyên
+  const id = m[1], gid = (u.match(/[#&?]gid=(\d+)/) || [])[1], g = gid ? '&gid=' + gid : '';
+  return [`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv${g}`, `https://docs.google.com/spreadsheets/d/${id}/export?format=csv${g}`];
+}
 async function loadSheet() {
-  if (SHEET_CSV) {
-    try {
-      const rows = csv(await (await fetch(SHEET_CSV)).text()).slice(1);
-      rows.forEach(([p, v, e]) => { p = (p || '').trim(); v = (v || '').trim(); if (p && v) (PACKS[p] = PACKS[p] || []).push([v, (e || '').trim()]); });
-    } catch (e) { note('Không tải được Google Sheet, đang dùng gói có sẵn. / Could not load the Google Sheet.'); }
+  if (SHEET_URL) {
+    let text = null;
+    for (const url of sheetUrls(SHEET_URL)) {
+      try { const r = await fetch(url); const t = await r.text(); if (r.ok && !t.trimStart().startsWith('<')) { text = t; break; } } catch (e) {}
+    }
+    if (text == null) note('Không đọc được Google Sheet (kiểm tra chế độ chia sẻ: bất kỳ ai có link đều xem được). Đang dùng gói có sẵn. / Could not read the Google Sheet.');
+    else csv(text).slice(1).forEach(([p, v, e]) => { p = (p || '').trim(); v = (v || '').trim(); if (p && v) (PACKS[p] = PACKS[p] || []).push([v, (e || '').trim()]); });
   }
   fillPacks();
 }
