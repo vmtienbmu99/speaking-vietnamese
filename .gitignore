@@ -1,0 +1,6 @@
+.tts_config.json
+build_tmp/
+__pycache__/
+*.pyc
+TaoGiongNoi.exe
+
