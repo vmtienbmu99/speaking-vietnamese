@@ -13,6 +13,32 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Be Vietnam Pr
 main{max-width:680px;margin:0 auto;padding:20px 16px 40px}
 h1{font-size:22px;font-weight:800;margin:0 0 12px;letter-spacing:-.2px}
 .bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;font-size:14px;color:var(--mute);margin-bottom:12px}
+button.link{background:none;color:var(--mute);text-decoration:underline;padding:0;min-height:0;font-size:13px;font-weight:600}
+button.small{padding:6px 14px;min-height:36px;font-size:14px}
+.who{display:flex;gap:12px;align-items:center;flex-wrap:wrap;width:100%;color:var(--ink);font-weight:600}
+.modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:34px 16px 16px;background:rgba(9,28,26,.74);overflow:auto}
+.card{position:relative;width:min(440px,100%);background:linear-gradient(#17413b,#0f2b27);color:#eef7f4;border:1px solid #2f6b62;border-radius:18px;padding:26px 18px 18px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.card h2{position:absolute;left:50%;top:0;transform:translate(-50%,-50%);margin:0;white-space:nowrap;padding:8px 26px;background:var(--hat);color:#2b1f05;border-radius:999px;font-size:17px;font-weight:800;letter-spacing:.5px}
+.card p{margin:10px 0 6px;color:#bcd8d2}
+#nameInput{width:100%;font:inherit;font-size:18px;padding:12px 14px;border-radius:10px;border:2px solid #2f6b62;background:#0f2b27;color:#fff;margin:8px 0 14px;text-align:center}
+#nameInput.bad{border-color:#ff7b7b}
+.podium{display:flex;justify-content:center;align-items:flex-end;gap:16px;margin:6px 0 10px}
+.pod{display:grid;justify-items:center;gap:3px;max-width:92px;font-size:12px}
+.pod .pn{max-width:92px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#bcd8d2}
+.av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:#2d6fb7;border:3px solid #6aa7e6;color:#fff}
+.pod.p1 .av{width:60px;height:60px;font-size:22px;border-color:#f0c24b}
+.medal{font-size:12px;font-weight:800;padding:0 8px;border-radius:999px;color:#2b1f05;background:#c9ced3}
+.p1 .medal{background:#f0c24b}.p3 .medal{background:#d08a4a}
+.lb-row{display:grid;grid-template-columns:34px 36px 1fr auto;align-items:center;gap:8px;padding:8px 14px;margin:8px 0;border-radius:999px;background:#1d4a44;text-align:left}
+.lb-row .rk{font-weight:800;font-size:18px}
+.lb-row.r1 .rk{color:#f0c24b}.lb-row.r2 .rk{color:#c9ced3}.lb-row.r3 .rk{color:#d08a4a}
+.lb-row .av{width:34px;height:34px;font-size:15px;background:#e9b44c;border-color:#f6d78b;color:#4a3410}
+.lb-row .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.lb-row .sc{font-variant-numeric:tabular-nums;font-weight:800}
+.lb-row.fade{-webkit-mask-image:linear-gradient(#000,rgba(0,0,0,.08));mask-image:linear-gradient(#000,rgba(0,0,0,.08))}
+.lb-row.me{outline:2px solid #8be0b4;background:#245a52}
+.dots{letter-spacing:6px;color:#8fb6ae;line-height:.5;margin:2px 0}
+#lbClose,#nameOk{margin-top:10px}
 .help{font-size:12px;line-height:1.5;color:var(--mute);margin:-4px 0 12px}
 .bar select{font:inherit;color:var(--ink);padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#fff}
 .bar .sc{margin-left:auto;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
@@ -36,9 +62,10 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
 </style>
 </head>
 <body>
-<main>
+<main id="app">
 <h1>Nói để nhảy · Speak to Jump</h1>
 <div class="bar">
+  <span class="who"><span id="hello"></span><button id="rename" class="link">Đổi tên / Change name</button><button id="lbBtn" class="alt small" hidden>🏆 Xếp hạng / Ranking</button></span>
   <label>Chủ đề / Topic: <select id="pack"></select></label>
   <label><input type="checkbox" id="tone"> Bỏ qua dấu thanh / Ignore tones</label>
   <label>Chế độ / Mode: <select id="lvl"><option value="practice">Luyện tập / Practice</option><option value="challenge">Thử thách / Challenge</option></select></label>
@@ -63,6 +90,21 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
 <p id="msg" hidden></p>
 <p style="margin-top:18px;font-size:12px;color:var(--mute)">Nhận giọng chạy ngay trên máy bạn, không gửi âm thanh đi đâu. Mô hình: hynt/Zipformer-30M-RNNT-6000h (CC BY-NC-ND 4.0, chỉ dùng phi thương mại); k2-fsa/sherpa-onnx; onnxruntime-web. Giọng đọc mẫu: VieNeu-TTS v3 Turbo (Apache-2.0). / Speech recognition runs on your device; audio is not uploaded.</p>
 </main>
+<div id="nameModal" class="modal" hidden>
+  <div class="card" role="dialog" aria-labelledby="nameTitle">
+    <h2 id="nameTitle">Xin chào! · Welcome</h2>
+    <p>Nhập tên của bạn để bắt đầu<br>Enter your name to begin</p>
+    <input id="nameInput" maxlength="30" autocomplete="off" placeholder="Tên của bạn / Your name">
+    <button id="nameOk">Bắt đầu / Continue</button>
+  </div>
+</div>
+<div id="lbModal" class="modal" hidden>
+  <div class="card" role="dialog" aria-labelledby="lbTitle">
+    <h2 id="lbTitle">BẢNG XẾP HẠNG</h2>
+    <div id="lbBody"></div>
+    <button id="lbClose" class="alt">ĐÓNG / CLOSE</button>
+  </div>
+</div>
 <script type="module">
 import * as ort from 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/ort.min.mjs';
 import { Recognizer } from './asr.mjs';
@@ -72,6 +114,11 @@ import { Recognizer } from './asr.mjs';
 // Sheet có 3 cột, dòng 1 là tiêu đề: chu_de | cau | nghia
 // Viết số bằng chữ (ví dụ "hai nghìn"), không dùng chữ số hay ký hiệu đặc biệt.
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1JHK1GFetL5xZchLkCRhDx7a_OuM7VEcJNkITi1CbzuQ/edit?gid=0';
+
+// Link "Web app" của Google Apps Script để ghi và đọc bảng xếp hạng (xem tools/dashboard.gs).
+// Để trống thì game vẫn chạy bình thường nhưng không có bảng xếp hạng.
+const DASHBOARD_URL = 'https://script.google.com/macros/s/AKfycbyGSw5bZRYEtgnLxwPVI7aAiPA_awDgehmgPl0X2hdKFh9haClO_3fBg7GY8f7zBP6R/exec';
+const TOP_N = 5;
 
 // Cách chia chặng: mỗi độ khó (1 đến 5) có PER_STAGE câu, bốc ngẫu nhiên từ Sheet (cột D = độ khó 1–5).
 // Qua hết độ khó 1, 2, 3, 4 thì lên độ khó 5 và chơi liên tục không giới hạn để thi điểm cao.
@@ -314,18 +361,19 @@ function saveBest() { if (!practiceMode && score > best) { best = score; $('best
 function over() {
   state = 'over'; saveBest();
   status('Thua rồi! Điểm / Score: ' + score + (score > 0 && score >= best ? ' · Kỷ lục mới / New record!' : '') + ' · Bấm Chơi lại để bắt đầu từ đầu', 'err');
-  $('go').textContent = 'Chơi lại / Play again'; $('go').disabled = false; $('pack').disabled = false; $('lvl').disabled = false;
+  $('go').textContent = 'Chơi lại / Play again'; $('go').disabled = false; $('pack').disabled = false; $('lvl').disabled = false; $('rename').disabled = false;
+  finishRun();
 }
 function begin() {
   if (!pool().length) { note('Chưa có câu nào cho chủ đề này. / No sentences for this topic.'); $('go').disabled = false; return; }
   practiceMode = $('lvl').value == 'practice'; score = 0; $('score').textContent = 0; off = 0; made = 0; used = new Set(); state = 'walking';
   obs = [{x: W - 110, s: nextS()}]; cur = obs[0].s; render();
   status('Chuẩn bị… / Get ready…');
-  $('go').disabled = false; $('go').textContent = 'Dừng / Stop'; $('pack').disabled = true; $('lvl').disabled = true;
+  $('go').disabled = false; $('go').textContent = 'Dừng / Stop'; $('pack').disabled = true; $('lvl').disabled = true; $('rename').disabled = true;
 }
 function stopGame() {
   stopRec(); stopAudio(); state = 'idle'; obs = [];
-  $('go').textContent = 'Bắt đầu / Start'; $('go').disabled = false; $('pack').disabled = false; $('lvl').disabled = false;
+  $('go').textContent = 'Bắt đầu / Start'; $('go').disabled = false; $('pack').disabled = false; $('lvl').disabled = false; $('rename').disabled = false;
   $('play').disabled = true; $('retry').hidden = true; $('skip').hidden = true; $('stg').textContent = '';
   status('Đã dừng. Bấm Bắt đầu để chơi lại / Stopped. Press Start to play again.');
 }
@@ -383,6 +431,66 @@ function frame(t) {
   update(dt); draw(); requestAnimationFrame(frame);
 }
 
+// ===== TÊN NGƯỜI CHƠI VÀ BẢNG XẾP HẠNG =====
+let playerName = '';   // không lưu lại: mỗi lần mở trang đều hỏi tên mới
+function askName() {
+  $('nameInput').value = playerName; $('nameInput').className = '';
+  $('nameModal').hidden = false; $('app').inert = true; setTimeout(() => $('nameInput').focus(), 50);
+}
+function setName() {
+  const n = $('nameInput').value.replace(/[\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 30);
+  if (!n) { $('nameInput').className = 'bad'; $('nameInput').focus(); return; }
+  playerName = n; $('hello').textContent = 'Xin chào, ' + n + ' · Hello, ' + n;
+  $('nameModal').hidden = true; $('app').inert = false;
+}
+async function dash(params) {   // gọi Google Apps Script (ghi điểm hoặc lấy bảng xếp hạng); lỗi thì trả về null
+  if (!DASHBOARD_URL) return null;
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 15000);
+  try {
+    const r = await fetch(DASHBOARD_URL + (DASHBOARD_URL.includes('?') ? '&' : '?') + new URLSearchParams(params), {signal: ctl.signal});
+    const d = await r.json(); return d && d.ok ? d : null;
+  } catch (e) { return null; } finally { clearTimeout(t); }
+}
+const el = (tag, cls, text) => Object.assign(document.createElement(tag), {className: cls || '', textContent: text ?? ''});
+const fmt = n => Number(n).toLocaleString('vi-VN');
+const initial = n => ((n || '?').trim()[0] || '?').toUpperCase();
+function lbRow(e, extra) {
+  const r = el('div', 'lb-row r' + e.rank + (extra ? ' ' + extra : ''));
+  r.append(el('span', 'rk', e.rank + '.'), el('span', 'av', initial(e.name)), el('span', 'nm', e.label || e.name), el('span', 'sc', fmt(e.score)));
+  return r;
+}
+function showBoard(msgText) {
+  $('lbBody').replaceChildren(el('p', '', msgText)); $('lbModal').hidden = false; $('app').inert = true; $('lbClose').focus();
+}
+function closeBoard() { $('lbModal').hidden = true; $('app').inert = false; }
+function renderBoard(d, mine) {
+  if (!d) { $('lbBody').replaceChildren(el('p', '', 'Chưa kết nối được bảng xếp hạng. / Could not reach the leaderboard.' + (mine ? ` Điểm của bạn / Your score: ${fmt(mine.score)}` : ''))); return; }
+  const top = d.top.slice(0, TOP_N), parts = [];
+  if (!top.length) parts.push(el('p', '', 'Chưa có ai trên bảng xếp hạng. / No scores yet.'));
+  else {
+    const pod = el('div', 'podium');
+    [1, 0, 2].forEach(i => {
+      const e = top[i]; if (!e) return;
+      const p = el('div', 'pod p' + (i + 1)); p.append(el('div', 'av', initial(e.name)), el('span', 'medal', String(i + 1)), el('span', 'pn', e.name)); pod.append(p);
+    });
+    parts.push(pod);
+  }
+  const outside = mine && mine.rank > TOP_N;
+  top.forEach((e, i) => parts.push(lbRow(e, (outside && i == top.length - 1 ? 'fade' : '') + (mine && !outside && mine.rank == e.rank ? ' me' : ''))));
+  if (outside) { parts.push(el('div', 'dots', '• • •')); parts.push(lbRow({...mine, label: mine.name + ' (Bạn / You)'}, 'me')); }
+  $('lbBody').replaceChildren(...parts);
+}
+async function openBoard() {
+  showBoard('Đang tải… / Loading…');
+  renderBoard(await dash({action: 'top'}), null);
+}
+async function finishRun() {   // ghi điểm của lượt Thử thách vừa kết thúc rồi hiện bảng xếp hạng
+  if (practiceMode || score < 1 || !DASHBOARD_URL) return;
+  showBoard('Đang ghi điểm… / Saving your score…');
+  const d = await dash({action: 'submit', name: playerName, score});
+  renderBoard(d, d && d.me ? d.me : {name: playerName, score});
+}
+
 // ===== SỰ KIỆN =====
 $('go').onclick = async () => {
   if (['walking', 'hearing', 'waiting', 'jumping', 'crashing', 'failed'].includes(state)) { stopGame(); return; }
@@ -407,12 +515,17 @@ $('skip').onclick = () => { if (state != 'failed') return; stopAudio(); succeed(
 if (window.speechSynthesis) speechSynthesis.getVoices();
 $('pack').onchange = () => { deck = []; };
 $('tone').onchange = () => { if (cur) render(); };
+$('nameOk').onclick = setName; $('nameInput').onkeydown = e => { if (e.key == 'Enter') setName(); };
+$('rename').onclick = askName; $('lbBtn').onclick = openBoard; $('lbBtn').hidden = !DASHBOARD_URL;
+$('lbClose').onclick = closeBoard; $('lbModal').onclick = e => { if (e.target === $('lbModal')) closeBoard(); };
+document.addEventListener('keydown', e => { if (e.key == 'Escape' && !$('lbModal').hidden) closeBoard(); });
 for (const id of ['voice', 'gender']) {   // nhớ lựa chọn giọng của người học
   try { const v = localStorage.getItem('ndn-' + id); if (v) $(id).value = v; } catch (e) {}
   $(id).onchange = () => { $('gender').disabled = $('voice').value == 'sys'; try { localStorage.setItem('ndn-' + id, $(id).value); } catch (e) {} };
 }
 $('gender').disabled = $('voice').value == 'sys';
 
+askName();
 if (!window.AudioContext || !window.WebAssembly || !navigator.mediaDevices) { note('Trình duyệt không hỗ trợ. Hãy dùng Chrome hoặc Edge mới. / Please use a recent Chrome or Edge.'); $('go').disabled = true; }
 loadSheet().then(() => {
   cur = {v: 'Xin chào', en: 'Hello'}; render(); requestAnimationFrame(frame);
