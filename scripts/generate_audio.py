@@ -29,12 +29,12 @@ import soundfile as sf
 
 # (voice_id, display_label, provider, provider_voice_code)
 VOICES: list[tuple[str, str, str, str]] = [
-    ("bac-nu", "Miền Bắc · Nữ (Trúc Ly)", "vieneu", "Trúc Ly"),
-    ("bac-nam", "Miền Bắc · Nam (Hải Đăng)", "vieneu", "Hải Đăng"),
-    ("trung-nu", "Miền Trung · Nữ (Ngọc Trân)", "vieneu", "Ngọc Trân"),
-    ("trung-nam", "Miền Trung · Nam (Quang Sơn)", "vieneu", "Quang Sơn"),
-    ("nam-nu", "Miền Nam · Nữ (Thùy Dung)", "vieneu", "Thùy Dung"),
-    ("nam-nam", "Miền Nam · Nam (Adam)", "vieneu", "Adam"),
+    ("bac-f", "Miền Bắc · Nữ (Trúc Ly)", "vieneu", "Trúc Ly"),
+    ("bac-m", "Miền Bắc · Nam (Hải Đăng)", "vieneu", "Hải Đăng"),
+    ("trung-f", "Miền Trung · Nữ (Ngọc Trân)", "vieneu", "Ngọc Trân"),
+    ("trung-m", "Miền Trung · Nam (Quang Sơn)", "vieneu", "Quang Sơn"),
+    ("nam-f", "Miền Nam · Nữ (Thùy Dung)", "vieneu", "Thùy Dung"),
+    ("nam-m", "Miền Nam · Nam (Adam)", "vieneu", "Adam"),
     ("edge-nu", "Chuẩn · Nữ (Edge Hoài My - Online)", "edge", "vi-VN-HoaiMyNeural"),
     ("edge-nam", "Chuẩn · Nam (Edge Nam Minh - Online)", "edge", "vi-VN-NamMinhNeural"),
 ]
@@ -83,8 +83,8 @@ def normalize_key(text: str) -> str:
 
 
 def audio_filename(norm_key: str) -> str:
-    """Return a deterministic short hash filename for a normalized sentence."""
-    digest = hashlib.sha256(norm_key.encode("utf-8")).hexdigest()[:12]
+    """Return a deterministic 12-char SHA-1 filename matching index.html's keyOf()."""
+    digest = hashlib.sha1(norm_key.encode("utf-8")).hexdigest()[:12]
     return f"{digest}.mp3"
 
 
