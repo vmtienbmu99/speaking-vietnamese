@@ -13,6 +13,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Be Vietnam Pr
 main{max-width:680px;margin:0 auto;padding:20px 16px 40px}
 h1{font-size:22px;font-weight:800;margin:0 0 12px;letter-spacing:-.2px}
 .bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;font-size:14px;color:var(--mute);margin-bottom:12px}
+.help{font-size:12px;line-height:1.5;color:var(--mute);margin:-4px 0 12px}
 .bar select{font:inherit;color:var(--ink);padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#fff}
 .bar .sc{margin-left:auto;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
 canvas{display:block;width:100%;height:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px}
@@ -40,9 +41,12 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
 <div class="bar">
   <label>Chủ đề / Topic: <select id="pack"></select></label>
   <label><input type="checkbox" id="tone"> Bỏ qua dấu thanh / Ignore tones</label>
-  <label>Mức chấm / Level: <select id="lvl"><option value="strict">Khó / Hard</option><option value="easy">Dễ (cho sai 1 từ) / Easy (1 mistake)</option></select></label>
-  <span class="sc">Điểm <span id="score">0</span> · Cao nhất <span id="best">0</span></span>
+  <label>Chế độ / Mode: <select id="lvl"><option value="practice">Luyện tập / Practice</option><option value="challenge">Thử thách / Challenge</option></select></label>
+  <label>Giọng mẫu / Voice: <select id="voice"><option value="bac">Miền Bắc / North</option><option value="trung">Miền Trung / Central</option><option value="nam">Miền Nam / South</option><option value="sys">Giọng máy / Device voice</option></select></label>
+  <label><select id="gender"><option value="f">Giọng nữ / Female</option><option value="m">Giọng nam / Male</option></select></label>
+  <span class="sc"><span id="stg"></span> · Điểm <span id="score">0</span> · Cao nhất <span id="best">0</span></span>
 </div>
+<p class="help">Độ khó tăng dần từ 1 đến 5 (mỗi độ khó 5 câu bốc ngẫu nhiên); tới độ khó 5 thì chơi không giới hạn. <b>Luyện tập:</b> nghe mẫu trước khi nói, thử lại không giới hạn, không thua. <b>Thử thách:</b> không nghe trước, nói sai là thua, thi điểm cao.<br>Levels rise from 1 to 5 (5 random sentences each); level 5 never ends. <b>Practice:</b> hear the sentence first, unlimited retries, no game over. <b>Challenge:</b> no preview, one mistake ends the run, chase a high score.</p>
 <canvas id="c" aria-label="Màn chơi"></canvas>
 <section id="panel">
   <div id="status" aria-live="polite">Bấm Bắt đầu để chơi / Press Start</div>
@@ -50,12 +54,14 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
   <p id="en"></p>
   <p id="heard"></p>
   <div class="row">
-    <button id="play" class="alt" disabled>🔊 Nghe mẫu / Listen</button>
+    <button id="play" class="alt" disabled>🔊 Nghe lại / Listen again</button>
+    <button id="retry" class="alt" hidden>↻ Thử lại / Try again</button>
+    <button id="skip" class="alt" hidden>Bỏ qua câu này / Skip →</button>
     <button id="go">Bắt đầu / Start</button>
   </div>
 </section>
 <p id="msg" hidden></p>
-<p style="margin-top:18px;font-size:12px;color:var(--mute)">Nhận giọng chạy ngay trên máy bạn, không gửi âm thanh đi đâu. Mô hình: hynt/Zipformer-30M-RNNT-6000h (CC BY-NC-ND 4.0, chỉ dùng phi thương mại); k2-fsa/sherpa-onnx; onnxruntime-web. / Speech recognition runs on your device; audio is not uploaded.</p>
+<p style="margin-top:18px;font-size:12px;color:var(--mute)">Nhận giọng chạy ngay trên máy bạn, không gửi âm thanh đi đâu. Mô hình: hynt/Zipformer-30M-RNNT-6000h (CC BY-NC-ND 4.0, chỉ dùng phi thương mại); k2-fsa/sherpa-onnx; onnxruntime-web. Giọng đọc mẫu: VieNeu-TTS v3 Turbo (Apache-2.0). / Speech recognition runs on your device; audio is not uploaded.</p>
 </main>
 <script type="module">
 import * as ort from 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/ort.min.mjs';
@@ -65,44 +71,25 @@ import { Recognizer } from './asr.mjs';
 // Sheet phải để chế độ: Chia sẻ > Bất kỳ ai có đường liên kết > Người xem. (Link CSV xuất bản lên web cũng dùng được.)
 // Sheet có 3 cột, dòng 1 là tiêu đề: chu_de | cau | nghia
 // Viết số bằng chữ (ví dụ "hai nghìn"), không dùng chữ số hay ký hiệu đặc biệt.
-const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1JHK1GFetL5xZchLkCRhDx7a_OuM7VEcJNkITi1CbzuQ/edit?gid=0#gid=0';
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1JHK1GFetL5xZchLkCRhDx7a_OuM7VEcJNkITi1CbzuQ/edit?gid=0';
 
-// Gói câu có sẵn: [câu tiếng Việt, nghĩa tiếng Anh]
-const PACKS = {
- 'Trường học': [
-  ['Xin chào cô em là sinh viên mới','Hello teacher, I’m a new student.'],
-  ['Thư viện mở cửa lúc mấy giờ ạ','What time does the library open?'],
-  ['Em chưa hiểu bài này','I don’t understand this lesson yet.'],
-  ['Cô có thể nói chậm hơn được không ạ','Could you speak more slowly?'],
-  ['Em xin phép nộp bài muộn','May I submit my assignment late?'],
-  ['Phòng học ở đâu vậy ạ','Where is the classroom?'],
-  ['Em muốn đăng ký học phần này','I’d like to register for this course.'],
-  ['Lịch thi khi nào ạ','When is the exam schedule?'],
-  ['Cho em mượn quyển sách này','Let me borrow this book.'],
-  ['Cảm ơn thầy đã giúp em','Thank you for helping me.']],
- 'Bệnh viện': [
-  ['Tôi bị đau đầu từ hôm qua','I’ve had a headache since yesterday.'],
-  ['Tôi muốn đăng ký khám bệnh','I’d like to register for a check-up.'],
-  ['Phòng khám ở tầng mấy ạ','Which floor is the clinic on?'],
-  ['Tôi bị dị ứng với thuốc này','I’m allergic to this medicine.'],
-  ['Bác sĩ ơi tôi bị sốt','Doctor, I have a fever.'],
-  ['Tôi cần mua thuốc ở đâu ạ','Where can I buy medicine?'],
-  ['Một ngày uống mấy lần ạ','How many times a day do I take it?'],
-  ['Tôi có bảo hiểm y tế','I have health insurance.'],
-  ['Làm ơn gọi giúp tôi bác sĩ','Please call a doctor for me.'],
-  ['Tôi thấy chóng mặt và buồn nôn','I feel dizzy and nauseous.']],
- 'Siêu thị': [
-  ['Chị ơi cái này giá bao nhiêu','How much is this?'],
-  ['Cho tôi một túi đựng đồ','Could I have a bag?'],
-  ['Tôi muốn mua một cân táo','I’d like to buy a kilo of apples.'],
-  ['Quầy rau củ ở đâu ạ','Where is the vegetable section?'],
-  ['Tôi trả bằng thẻ được không','Can I pay by card?'],
-  ['Cho tôi xin hóa đơn','May I have a receipt?'],
-  ['Cái này có giảm giá không ạ','Is this on sale?'],
-  ['Bớt cho em một chút được không','Can you lower the price a little?'],
-  ['Em muốn đổi sản phẩm này','I’d like to exchange this product.'],
-  ['Siêu thị đóng cửa lúc mấy giờ','What time does the supermarket close?']]
+// Cách chia chặng: mỗi độ khó (1 đến 5) có PER_STAGE câu, bốc ngẫu nhiên từ Sheet (cột D = độ khó 1–5).
+// Qua hết độ khó 1, 2, 3, 4 thì lên độ khó 5 và chơi liên tục không giới hạn để thi điểm cao.
+const PER_STAGE = 5;
+// Hàng nào trong Sheet chưa điền cột D thì độ khó tự tính theo số từ: ≤2 từ = 1, ≤4 từ = 2, ≤6 từ = 3, ≤9 từ = 4, còn lại = 5.
+const LEVEL_MAX_WORDS = [2, 4, 6, 9];
+const autoLevel = v => { const n = v.trim().split(/\s+/).length, i = LEVEL_MAX_WORDS.findIndex(m => n <= m); return i < 0 ? 5 : i + 1; };
+
+// ===== THỜI GIAN NÓI (đơn vị: giây). Muốn cho người học nói lâu hơn thì tăng các số này =====
+const TIMING = {
+  base: 15,      // thời gian tối thiểu được nói cho mỗi câu
+  perWord: 2,    // cộng thêm cho mỗi từ trong câu (câu 2 từ: 15 + 2×2 = 19 giây; câu 10 từ: 15 + 2×10 = 35 giây)
+  pause: 1.5,    // im lặng bao lâu thì máy coi là nói xong và chấm. Tăng lên nếu người học hay ngập ngừng giữa câu
+  maxSpeech: 20  // độ dài tối đa của một lần nói liền
 };
+
+// Các gói câu (chủ đề) được đọc từ Google Sheet, cột chu_de.
+const PACKS = {};
 
 // ===== TIỆN ÍCH =====
 const $ = id => document.getElementById(id);
@@ -143,7 +130,7 @@ function csv(t) {
 }
 function fillPacks() {
   const keep = $('pack').value;
-  $('pack').innerHTML = '<option value="*">Tất cả / All</option>' + Object.keys(PACKS).map(k => `<option>${k}</option>`).join('');
+  $('pack').replaceChildren(new Option('Tất cả / All', '*'), ...Object.keys(PACKS).map(k => new Option(k, k)));
   if (keep && [...$('pack').options].some(o => o.value == keep)) $('pack').value = keep;
 }
 function sheetUrls(u) {
@@ -159,7 +146,7 @@ async function loadSheet() {
       try { const r = await fetch(url); const t = await r.text(); if (r.ok && !t.trimStart().startsWith('<')) { text = t; break; } } catch (e) {}
     }
     if (text == null) note('Không đọc được Google Sheet (kiểm tra chế độ chia sẻ: bất kỳ ai có link đều xem được). Đang dùng gói có sẵn. / Could not read the Google Sheet.');
-    else csv(text).slice(1).forEach(([p, v, e]) => { p = (p || '').trim(); v = (v || '').trim(); if (p && v) (PACKS[p] = PACKS[p] || []).push([v, (e || '').trim()]); });
+    else csv(text).slice(1).forEach(([p, v, e, d]) => { p = (p || '').trim(); v = (v || '').trim(); const lv = parseInt(d, 10); if (p && v) (PACKS[p] = PACKS[p] || []).push([v, (e || '').trim(), lv >= 1 && lv <= 5 ? lv : autoLevel(v)]); });
   }
   fillPacks();
 }
@@ -169,26 +156,41 @@ const cv = $('c'), ctx = cv.getContext('2d');
 const W = 600, H = 190, GY = 150, HX = 90, SPEED = 220, STOP = 90, JT = 1, JH = 78, POLE = 44;
 const dpr = Math.min(2, window.devicePixelRatio || 1);
 cv.width = W * dpr; cv.height = H * dpr; ctx.scale(dpr, dpr);
-let state = 'idle', obs = [], cur = null, exp = [], st = [], deck = [], score = 0, off = 0, jt = 0, timer = 0, rec = null, last = 0;
+let state = 'idle', obs = [], cur = null, exp = [], st = [], deck = [], score = 0, off = 0, jt = 0, timer = 0, rec = null, last = 0, practiceMode = true, lastSec = -1, wmap = [];
 let best = 0; try { best = +localStorage.getItem('ndn-best') || 0; } catch (e) {}
 $('best').textContent = best;
 
+let used = new Set(), made = 0;
 const pool = () => $('pack').value == '*' ? Object.values(PACKS).flat() : PACKS[$('pack').value] || [];
-function nextS() { if (!deck.length) deck = shuffle(pool()); const [v, en] = deck.pop(); return {v, en}; }
+const levelOf = k => Math.min(5, Math.floor(k / PER_STAGE) + 1);
+function nearestLevel(w) { for (let d = 0; d < 5; d++) for (const l of [w + d, w - d]) if (l >= 1 && l <= 5 && pool().some(p => p[2] == l)) return l; return null; }
+function nextS() {
+  const k = made++, stage = levelOf(k), lv = nearestLevel(stage);   // nếu độ khó này chưa có câu thì lấy độ khó gần nhất
+  let c = pool().filter(p => p[2] == lv && !used.has(p[0]));
+  if (!c.length) { pool().filter(p => p[2] == lv).forEach(p => used.delete(p[0])); c = pool().filter(p => p[2] == lv); }   // hết câu thì xáo lại
+  const [v, en] = c[(Math.random() * c.length) | 0]; used.add(v);
+  return {v, en, k, stage};
+}
 function status(t, cls) { $('status').textContent = t; $('status').className = cls || ''; }
 
 function render() {
-  const words = cur.v.split(/\s+/);
-  exp = words.map(w => toks(w).join(''));
+  const words = cur.v.trim().split(/\s+/);
+  exp = []; wmap = [];
+  words.forEach(w => { const t = toks(w); wmap.push([exp.length, exp.length + t.length]); exp.push(...t); });
   st = exp.map(() => 0);
   $('sent').replaceChildren(...words.map(w => Object.assign(document.createElement('span'), {className: 'w', textContent: w})));
   $('en').textContent = cur.en; $('heard').textContent = '';
-  $('play').disabled = false;
+  const k = cur.k || 0;
+  $('stg').textContent = state == 'idle' ? '' : (k >= PER_STAGE * 4 ? `Độ khó 5/5 · không giới hạn · câu ${k - PER_STAGE * 4 + 1}` : `Độ khó ${cur.stage}/5 · câu ${k % PER_STAGE + 1}/${PER_STAGE}`) + ` · ${words.length} từ`;
+  $('play').disabled = true; $('retry').hidden = true; $('skip').hidden = true;
 }
 function paint(flags, finalFail) {
-  [...$('sent').children].forEach((el, i) => { el.className = 'w' + (flags[i] ? ' ok' : finalFail ? ' bad' : ''); });
+  [...$('sent').children].forEach((el, i) => {
+    const [a, b] = wmap[i] || [0, 0]; let ok = true; for (let k = a; k < b; k++) if (!flags[k]) ok = false;
+    el.className = 'w' + (b > a && ok ? ' ok' : b > a && finalFail ? ' bad' : '');
+  });
 }
-const allow = () => $('lvl').value == 'easy' && exp.length >= 4 ? 1 : 0;
+const allow = () => practiceMode && exp.length >= 4 ? 1 : 0;
 function evaluate(alts) {
   let b = null;
   for (const a of alts) { const f = align(exp, toks(a)), n = f.reduce((x, y) => x + y, 0); if (!b || n > b.n) b = {s: f, n, text: a}; }
@@ -230,7 +232,7 @@ function onChunk(ch) {
     seg = {chunks: pre, len, lastVoice: len, lastDec: 0, final: false}; pre = [];
   } else { seg.chunks.push(ch); seg.len += ch.length; if (voiced) seg.lastVoice = seg.len; }
   if (seg.final) return;
-  if (seg.len - seg.lastVoice >= 11200 || seg.len >= 16000 * 9) { seg.final = true; runDecode(true); }   // im lặng 0,7 giây = nói xong
+  if (seg.len - seg.lastVoice >= TIMING.pause * 16000 || seg.len >= TIMING.maxSpeech * 16000) { seg.final = true; runDecode(true); }   // im lặng đủ lâu = nói xong
   else if (seg.len - seg.lastDec >= 9600) runDecode(false);                                              // nhận tạm mỗi 0,6 giây
 }
 async function runDecode(final) {
@@ -254,27 +256,78 @@ function handle(txt, final) {
 function listen() { seg = null; pre = []; wantFinal = false; listening = true; }
 function stopRec() { listening = false; seg = null; pre = []; }
 
-function succeed() {
-  stopRec(); state = 'jumping'; jt = 0; score++;
-  $('score').textContent = score; paint(exp.map(() => 1), false);
-  status('Chính xác! / Correct!', 'on');
+function succeed(skipped) {
+  stopRec(); state = 'jumping'; jt = 0;
+  $('play').disabled = true; $('retry').hidden = true; $('skip').hidden = true;
+  if (skipped) status('Bỏ qua câu này / Skipped');
+  else { score++; $('score').textContent = score; paint(exp.map(() => 1), false); status('Chính xác! / Correct!', 'on'); }
   obs.push({x: W + 40, s: nextS()});
 }
-function fail(flags, why) {
-  stopRec(); state = 'crashing'; st = flags; paint(flags, true);
-  status(why, 'err');
+let voiceWarned = false;
+const viVoice = () => window.speechSynthesis && speechSynthesis.getVoices().find(v => /^vi/i.test(v.lang));
+function speakSystem(text, done) {
+  if (!viVoice()) {
+    if (!voiceWarned) { voiceWarned = true; note('Chưa có audio mẫu cho câu này và máy không có giọng đọc tiếng Việt, nên bỏ qua phần nghe mẫu. / No audio sample and no Vietnamese voice on this device.'); }
+    if (done) done(); return;
+  }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text); u.voice = viVoice(); u.lang = 'vi-VN'; u.rate = .85;
+  let fin = false; const end = () => { if (!fin) { fin = true; clearTimeout(t); if (done) done(); } };
+  const t = setTimeout(end, 6000 + text.length * 150);   // đề phòng trình duyệt không báo "đọc xong"
+  u.onend = u.onerror = end; speechSynthesis.speak(u);
 }
+// Tên file audio = 12 ký tự đầu của SHA-1 của câu đã chuẩn hóa (cùng công thức với tools/gen_audio.py)
+async function keyOf(t) {
+  const n = t.normalize('NFC').toLowerCase().split(/\s+/).filter(Boolean).join(' ');
+  const h = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(n));
+  return [...new Uint8Array(h)].slice(0, 6).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+let curAudio = null;
+function stopAudio() { if (curAudio) { curAudio.onended = curAudio.onerror = curAudio.onplaying = null; curAudio.pause(); curAudio = null; } if (window.speechSynthesis) speechSynthesis.cancel(); }
+function playFile(url, done) {
+  return new Promise(resolve => {
+    const a = new Audio(url); curAudio = a; let fin = false;
+    const end = () => { if (!fin) { fin = true; if (done) done(); } };
+    a.onended = end; a.onerror = () => resolve(false);
+    a.onplaying = () => { resolve(true); setTimeout(end, 60000); };   // đề phòng không nhận được sự kiện "phát xong"
+    a.play().catch(() => resolve(false));
+  });
+}
+async function speak(text, done) {
+  stopAudio();
+  const region = $('voice').value;
+  if (region != 'sys') {
+    try { const key = await keyOf(text); for (const ext of ['mp3', 'wav']) if (await playFile(`./audio/${region}-${$('gender').value}/${key}.${ext}`, done)) return; } catch (e) {}
+  }
+  speakSystem(text, done);   // chưa có file audio: dùng giọng đọc của trình duyệt
+}
+function startSpeaking() {
+  state = 'waiting'; timer = TIMING.base + TIMING.perWord * exp.length; lastSec = -1;
+  listen();
+}
+function fail(flags, why) {
+  stopRec(); st = flags; paint(flags, true); $('play').disabled = false;
+  if (practiceMode) { state = 'failed'; $('retry').hidden = false; $('skip').hidden = false; status(why + ' · Nghe lại rồi thử lại / Listen, then try again', 'err'); }
+  else { state = 'crashing'; status(why, 'err'); }
+}
+function saveBest() { if (!practiceMode && score > best) { best = score; $('best').textContent = best; try { localStorage.setItem('ndn-best', best); } catch (e) {} } }
 function over() {
-  state = 'over';
-  if (score > best) { best = score; $('best').textContent = best; try { localStorage.setItem('ndn-best', best); } catch (e) {} }
-  status('Thua rồi · Game over. Điểm / Score: ' + score, 'err');
-  $('go').textContent = 'Chơi lại / Play again'; $('go').disabled = false; $('pack').disabled = false;
+  state = 'over'; saveBest();
+  status('Thua rồi! Điểm / Score: ' + score + (score > 0 && score >= best ? ' · Kỷ lục mới / New record!' : '') + ' · Bấm Chơi lại để bắt đầu từ đầu', 'err');
+  $('go').textContent = 'Chơi lại / Play again'; $('go').disabled = false; $('pack').disabled = false; $('lvl').disabled = false;
 }
 function begin() {
-  score = 0; $('score').textContent = 0; deck = []; off = 0;
+  if (!pool().length) { note('Chưa có câu nào cho chủ đề này. / No sentences for this topic.'); $('go').disabled = false; return; }
+  practiceMode = $('lvl').value == 'practice'; score = 0; $('score').textContent = 0; off = 0; made = 0; used = new Set(); state = 'walking';
   obs = [{x: W - 110, s: nextS()}]; cur = obs[0].s; render();
-  state = 'walking'; status('Chuẩn bị… / Get ready…');
-  $('go').disabled = true; $('pack').disabled = true; $('go').textContent = 'Đang chơi / Playing';
+  status('Chuẩn bị… / Get ready…');
+  $('go').disabled = false; $('go').textContent = 'Dừng / Stop'; $('pack').disabled = true; $('lvl').disabled = true;
+}
+function stopGame() {
+  stopRec(); stopAudio(); state = 'idle'; obs = [];
+  $('go').textContent = 'Bắt đầu / Start'; $('go').disabled = false; $('pack').disabled = false; $('lvl').disabled = false;
+  $('play').disabled = true; $('retry').hidden = true; $('skip').hidden = true; $('stg').textContent = '';
+  status('Đã dừng. Bấm Bắt đầu để chơi lại / Stopped. Press Start to play again.');
 }
 
 function update(dt) {
@@ -282,12 +335,16 @@ function update(dt) {
     const d = SPEED * dt; off = (off + d) % 40; obs.forEach(o => o.x -= d);
   }
   if (state == 'walking' && obs[0].x - (HX + 27) <= STOP) {
-    obs[0].x = HX + 27 + STOP; state = 'waiting'; timer = 16;
-    status('Nói câu này! / Say this sentence!', 'on'); listen();
+    obs[0].x = HX + 27 + STOP;
+    if (practiceMode) { state = 'hearing'; status('Nghe mẫu… / Listen…', 'on'); speak(cur.v, () => { if (state == 'hearing') startSpeaking(); }); }
+    else startSpeaking();
   } else if (state == 'waiting') {
-    timer -= dt; if (timer <= 0) fail(st.map(() => 0), 'Hết giờ / Time’s up');
+    timer -= dt; const sec = Math.ceil(timer);
+    if (sec !== lastSec) { lastSec = sec; status('Nói câu này! / Say it now! · ' + sec + 's', 'on'); }
+    if (timer <= 0) fail(st.map(() => 0), 'Hết giờ / Time’s up');
   } else if (state == 'jumping') {
-    jt += dt; if (jt >= JT) { state = 'walking'; obs.shift(); cur = obs[0].s; render(); status('Chuẩn bị… / Get ready…'); }
+    jt += dt; if (jt >= JT) { obs.shift();
+    state = 'walking'; cur = obs[0].s; render(); status('Chuẩn bị… / Get ready…'); }
   } else if (state == 'crashing' && obs[0].x <= HX + 12) over();
 }
 
@@ -328,6 +385,7 @@ function frame(t) {
 
 // ===== SỰ KIỆN =====
 $('go').onclick = async () => {
+  if (['walking', 'hearing', 'waiting', 'jumping', 'crashing', 'failed'].includes(state)) { stopGame(); return; }
   $('go').disabled = true; note('');
   try {
     if (!recog) {
@@ -343,16 +401,23 @@ $('go').onclick = async () => {
   }
   begin();
 };
-$('play').onclick = () => {
-  if (!cur || !window.speechSynthesis) return;
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(cur.v); u.lang = 'vi-VN'; u.rate = .85; speechSynthesis.speak(u);
-};
+$('play').onclick = () => { if (cur) speak(cur.v); };
+$('retry').onclick = () => { if (state != 'failed') return; stopAudio(); render(); startSpeaking(); };
+$('skip').onclick = () => { if (state != 'failed') return; stopAudio(); succeed(true); };
+if (window.speechSynthesis) speechSynthesis.getVoices();
 $('pack').onchange = () => { deck = []; };
 $('tone').onchange = () => { if (cur) render(); };
+for (const id of ['voice', 'gender']) {   // nhớ lựa chọn giọng của người học
+  try { const v = localStorage.getItem('ndn-' + id); if (v) $(id).value = v; } catch (e) {}
+  $(id).onchange = () => { $('gender').disabled = $('voice').value == 'sys'; try { localStorage.setItem('ndn-' + id, $(id).value); } catch (e) {} };
+}
+$('gender').disabled = $('voice').value == 'sys';
 
 if (!window.AudioContext || !window.WebAssembly || !navigator.mediaDevices) { note('Trình duyệt không hỗ trợ. Hãy dùng Chrome hoặc Edge mới. / Please use a recent Chrome or Edge.'); $('go').disabled = true; }
-loadSheet().then(() => { cur = {v: 'Xin chào', en: 'Hello'}; render(); requestAnimationFrame(frame); });
+loadSheet().then(() => {
+  cur = {v: 'Xin chào', en: 'Hello'}; render(); requestAnimationFrame(frame);
+  if (!Object.keys(PACKS).length) { $('go').disabled = true; if ($('msg').hidden) note('Chưa đọc được câu nào từ Google Sheet. / No sentences loaded from the Google Sheet.'); }
+});
 </script>
 </body>
 </html>
