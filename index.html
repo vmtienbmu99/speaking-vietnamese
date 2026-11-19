@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#dfeceb;--ink:#12332f;--mute:#587571;--panel:#f7fbfa;--line:#b9d1ce;--ok:#17855a;--bad:#c93232;--hat:#d9a93f;--btn:#12332f}
+:root{--bg:#dfeceb;--ink:#12332f;--mute:#587571;--panel:#f7fbfa;--line:#b9d1ce;--ok:#17855a;--bad:#c93232;--hat:#d9a93f;--btn:#12332f;--hl:#2563eb;--hl-soft:#dbeafe;--hl-ink:#1d4ed8}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Be Vietnam Pro",system-ui,Arial,sans-serif}
 main{max-width:680px;margin:0 auto;padding:20px 16px 40px}
@@ -46,11 +46,16 @@ canvas{display:block;width:100%;height:auto;background:var(--panel);border:1px s
 #panel{margin-top:14px;padding:18px;background:var(--panel);border:1px solid var(--line);border-radius:12px;text-align:center}
 #status{min-height:22px;font-size:14px;font-weight:600;color:var(--mute)}
 #status.on{color:var(--ok)}#status.err{color:var(--bad)}
-#sent{font-size:clamp(26px,6vw,38px);font-weight:800;line-height:1.3;margin:8px 0 4px;letter-spacing:-.4px}
-.w{display:inline-block;margin:0 .13em;padding:0 .08em;border-radius:6px;transition:color .15s,background .15s}
+#sent{font-size:clamp(26px,6vw,38px);font-weight:800;line-height:1.38;margin:8px 0 6px;letter-spacing:-.4px}
+.phrase{display:inline-block;padding:0 .1em;margin:0 .04em;border-radius:10px;cursor:pointer;transform-origin:center bottom;transition:transform .16s cubic-bezier(.2,.8,.2,1),background-color .16s,color .16s,box-shadow .16s}
+.phrase:hover,.phrase.active{transform:scale(1.16);background:var(--hl);color:#fff;font-weight:800;text-shadow:0 1px 0 rgba(0,0,0,.18);box-shadow:0 6px 16px rgba(37,99,235,.28);position:relative;z-index:2}
+.w{display:inline-block;margin:0 .1em;padding:0 .04em;border-radius:6px;transition:color .15s,background .15s}
 .w.ok{color:var(--ok)}
 .w.bad{color:var(--bad);background:#fbe0e0;text-decoration:underline wavy var(--bad) 2px;text-underline-offset:5px}
-#en{color:var(--mute);margin:0 0 10px;min-height:24px}
+.phrase:hover .w,.phrase.active .w,.phrase:hover .w.ok,.phrase.active .w.ok,.phrase:hover .w.bad,.phrase.active .w.bad{color:#fff;background:transparent}
+#en{color:var(--mute);margin:0 0 10px;min-height:26px;font-size:17px;line-height:1.5}
+.en-phrase{display:inline-block;padding:1px 6px;margin:0 1px;border-radius:6px;cursor:pointer;transition:background-color .16s,color .16s,transform .16s}
+.en-phrase:hover,.en-phrase.active{background:var(--hl-soft);color:var(--hl-ink);font-weight:800;transform:scale(1.06);box-shadow:0 2px 8px rgba(37,99,235,.16)}
 #heard{min-height:24px;margin:0 0 12px;font-size:15px;color:var(--mute);overflow-wrap:anywhere}
 .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 button{font:600 16px inherit;font-family:inherit;border:0;border-radius:10px;padding:11px 20px;cursor:pointer;background:var(--btn);color:#fff;min-height:46px}
@@ -59,6 +64,23 @@ button:disabled{opacity:.5;cursor:default}
 button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #e0b24c;outline-offset:2px}
 #msg{margin-top:12px;padding:10px 14px;border-radius:10px;background:#fbe8d0;color:#6a3d0b;font-size:14px}
 [hidden]{display:none!important}
+
+/* Tooltip từ vựng + ví dụ song ngữ */
+#wordTooltip{position:fixed;z-index:40;width:min(340px,calc(100vw - 24px));background:#ffffff;color:var(--ink);border:1.5px solid #93c5fd;border-radius:14px;padding:12px 14px;text-align:left;box-shadow:0 14px 34px rgba(15,23,42,.18);font-size:13.5px;line-height:1.45;pointer-events:auto;animation:tipIn .14s ease-out}
+@keyframes tipIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.tt-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding-bottom:7px;border-bottom:1px solid #e2e8f0}
+.tt-pair{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px}
+.tt-vi{font-weight:800;font-size:15px;color:var(--ink)}
+.tt-en{font-weight:800;font-size:15px;color:var(--hl);background:#eff6ff;padding:1px 7px;border-radius:6px}
+.tt-pos{font-size:11.5px;font-weight:600;color:var(--mute)}
+.tt-close{background:none;color:var(--mute);padding:0 4px;min-height:0;font-size:16px;line-height:1;border-radius:6px}
+.tt-close:hover{background:#f1f5f9;color:var(--ink)}
+.tt-note{margin-top:6px;font-size:12.5px;color:#475569}
+.tt-ex-title{margin:8px 0 4px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--mute)}
+.tt-ex{background:#f8fafc;border-left:3px solid var(--hl);border-radius:0 8px 8px 0;padding:6px 9px;margin-top:5px}
+.tt-ex-vi{font-weight:600;color:var(--ink);font-size:13px}
+.tt-ex-en{color:#334155;font-size:12.5px;margin-top:1px}
+.tt-loading{color:var(--mute);font-size:13px;padding:4px 0}
 </style>
 </head>
 <body>
@@ -90,6 +112,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
 <p id="msg" hidden></p>
 <p style="margin-top:18px;font-size:12px;color:var(--mute)">Nhận giọng chạy ngay trên máy bạn, không gửi âm thanh đi đâu. Mô hình: hynt/Zipformer-30M-RNNT-6000h (CC BY-NC-ND 4.0, chỉ dùng phi thương mại); k2-fsa/sherpa-onnx; onnxruntime-web. Giọng đọc mẫu: VieNeu-TTS v3 Turbo (Apache-2.0). / Speech recognition runs on your device; audio is not uploaded.</p>
 </main>
+<div id="wordTooltip" role="tooltip" hidden></div>
 <div id="nameModal" class="modal" hidden>
   <div class="card" role="dialog" aria-labelledby="nameTitle">
     <h2 id="nameTitle">Xin chào! · Welcome</h2>
@@ -109,38 +132,29 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
 import * as ort from 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/ort.min.mjs';
 import { Recognizer } from './asr.mjs';
 // ===== CẤU HÌNH =====
-// Dán link Google Sheet bình thường (link đang mở trên thanh địa chỉ) vào đây.
-// Sheet phải để chế độ: Chia sẻ > Bất kỳ ai có đường liên kết > Người xem. (Link CSV xuất bản lên web cũng dùng được.)
-// Sheet có 3 cột, dòng 1 là tiêu đề: chu_de | cau | nghia
-// Viết số bằng chữ (ví dụ "hai nghìn"), không dùng chữ số hay ký hiệu đặc biệt.
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1JHK1GFetL5xZchLkCRhDx7a_OuM7VEcJNkITi1CbzuQ/edit?gid=0';
-
-// Link "Web app" của Google Apps Script để ghi và đọc bảng xếp hạng (xem tools/dashboard.gs).
-// Để trống thì game vẫn chạy bình thường nhưng không có bảng xếp hạng.
 const DASHBOARD_URL = 'https://script.google.com/macros/s/AKfycbyGSw5bZRYEtgnLxwPVI7aAiPA_awDgehmgPl0X2hdKFh9haClO_3fBg7GY8f7zBP6R/exec';
-const TOP_N = 5;
 
-// Cách chia chặng: mỗi độ khó (1 đến 5) có PER_STAGE câu, bốc ngẫu nhiên từ Sheet (cột D = độ khó 1–5).
-// Qua hết độ khó 1, 2, 3, 4 thì lên độ khó 5 và chơi liên tục không giới hạn để thi điểm cao.
+// Để trống '' để gọi AI an toàn qua DASHBOARD_URL (Google Apps Script)
+const GEMINI_API_KEY = '';
+
+const TOP_N = 5;
 const PER_STAGE = 5;
-// Hàng nào trong Sheet chưa điền cột D thì độ khó tự tính theo số từ: ≤2 từ = 1, ≤4 từ = 2, ≤6 từ = 3, ≤9 từ = 4, còn lại = 5.
 const LEVEL_MAX_WORDS = [2, 4, 6, 9];
 const autoLevel = v => { const n = v.trim().split(/\s+/).length, i = LEVEL_MAX_WORDS.findIndex(m => n <= m); return i < 0 ? 5 : i + 1; };
 
-// ===== THỜI GIAN NÓI (đơn vị: giây). Muốn cho người học nói lâu hơn thì tăng các số này =====
+// ===== THỜI GIAN NÓI (đơn vị: giây) =====
 const TIMING = {
-  base: 15,      // thời gian tối thiểu được nói cho mỗi câu
-  perWord: 2,    // cộng thêm cho mỗi từ trong câu (câu 2 từ: 15 + 2×2 = 19 giây; câu 10 từ: 15 + 2×10 = 35 giây)
-  pause: 1.5,    // im lặng bao lâu thì máy coi là nói xong và chấm. Tăng lên nếu người học hay ngập ngừng giữa câu
-  maxSpeech: 20  // độ dài tối đa của một lần nói liền
+  base: 15,
+  perWord: 2,
+  pause: 1.5,
+  maxSpeech: 20
 };
 
-// Các gói câu (chủ đề) được đọc từ Google Sheet, cột chu_de.
 const PACKS = {};
 
 // ===== TIỆN ÍCH =====
 const $ = id => document.getElementById(id);
-const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const note = t => { $('msg').textContent = t; $('msg').hidden = !t; };
 
 function toks(s) {
@@ -148,7 +162,6 @@ function toks(s) {
   if ($('tone').checked) s = s.normalize('NFD').replace(/[\u0300\u0301\u0303\u0309\u0323]/g, '').normalize('NFC');
   return s.split(/\s+/).filter(Boolean);
 }
-// Căn chỉnh từng từ: trả về mảng 1 (đúng) / 0 (sai hoặc thiếu) cho mỗi từ của câu mẫu
 function align(exp, got) {
   const n = exp.length, m = got.length, d = Array.from({length: n + 1}, () => Array(m + 1).fill(0));
   for (let i = n; i >= 0; i--) for (let j = m; j >= 0; j--)
@@ -182,7 +195,7 @@ function fillPacks() {
 }
 function sheetUrls(u) {
   const m = u.match(/\/spreadsheets\/d\/([\w-]+)/);
-  if (!m || /\/pub\?|output=csv/.test(u)) return [u];            // link CSV xuất bản: dùng nguyên
+  if (!m || /\/pub\?|output=csv/.test(u)) return [u];
   const id = m[1], gid = (u.match(/[#&?]gid=(\d+)/) || [])[1], g = gid ? '&gid=' + gid : '';
   return [`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv${g}`, `https://docs.google.com/spreadsheets/d/${id}/export?format=csv${g}`];
 }
@@ -196,6 +209,355 @@ async function loadSheet() {
     else csv(text).slice(1).forEach(([p, v, e, d]) => { p = (p || '').trim(); v = (v || '').trim(); const lv = parseInt(d, 10); if (p && v) (PACKS[p] = PACKS[p] || []).push([v, (e || '').trim(), lv >= 1 && lv <= 5 ? lv : autoLevel(v)]); });
   }
   fillPacks();
+}
+
+// ===== AI DỊCH TỰ ĐỘNG, HIGHLIGHT 2 CHIỀU & TOOLTIP VÍ DỤ =====
+const AI_CACHE_KEY = 'ndn-ai-phrases-v1';
+const aiMemCache = new Map();
+const aiInFlight = new Map();
+try {
+  const saved = JSON.parse(localStorage.getItem(AI_CACHE_KEY) || '{}');
+  Object.entries(saved).forEach(([k, v]) => aiMemCache.set(k, v));
+} catch (e) {}
+
+function saveAiCache(key, value) {
+  aiMemCache.set(key, value);
+  try {
+    const obj = Object.fromEntries([...aiMemCache.entries()].slice(-120));
+    localStorage.setItem(AI_CACHE_KEY, JSON.stringify(obj));
+  } catch (e) {}
+}
+
+let phraseMeta = {}, pinnedPid = null, activeAnchor = null, hideTipTimer = null, aiLoading = false;
+const cleanTok = w => w.normalize('NFC').toLowerCase().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
+const escReg = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+async function fetchSentenceAnalysis(vi, en) {
+  const key = `${vi.trim()}||${en.trim()}`;
+  if (aiMemCache.has(key)) return aiMemCache.get(key);
+  if (aiInFlight.has(key)) return aiInFlight.get(key);
+
+  const task = (async () => {
+    try {
+      let data = null;
+      if (GEMINI_API_KEY) {
+        const prompt = `Phân tích câu song ngữ Việt - Anh sau thành các từ/cụm từ có nghĩa tự nhiên theo thứ tự câu tiếng Việt.
+Câu tiếng Việt: "${vi}"
+Câu tiếng Anh: "${en}"
+
+Yêu cầu trả về JSON chuẩn xác:
+- vi: cụm từ tiếng Việt trích đúng từ câu trên (ghép từ ghép như "Thư viện", "mở cửa", "lúc mấy giờ").
+- en: nghĩa tiếng Anh ngắn gọn của cụm từ đó (ví dụ: "library", "open", "what time").
+- en_in_sent: đoạn chữ tương ứng trích Y HỆT từ câu tiếng Anh đã cho để bôi đậm (ví dụ: "the library", "open", "What time"; nếu là từ đệm như "ạ" không có trong câu Anh thì để chuỗi rỗng "").
+- pos: từ loại ngắn gọn (ví dụ: "danh từ", "động từ", "cụm từ hỏi").
+- note: giải thích cách dùng cực ngắn (1 câu ngắn).
+- examples: mảng gồm đúng 2 câu ví dụ khác nhau có sử dụng từ/cụm từ đó, mỗi ví dụ có "vi" (tiếng Việt) và "en" (tiếng Anh).`;
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
+        const r = await fetch(url, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            contents: [{parts: [{text: prompt}]}],
+            generationConfig: {
+              temperature: 0.2,
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: 'OBJECT',
+                properties: {
+                  phrases: {
+                    type: 'ARRAY',
+                    items: {
+                      type: 'OBJECT',
+                      properties: {
+                        vi: {type: 'STRING'},
+                        en: {type: 'STRING'},
+                        en_in_sent: {type: 'STRING'},
+                        pos: {type: 'STRING'},
+                        note: {type: 'STRING'},
+                        examples: {
+                          type: 'ARRAY',
+                          items: {
+                            type: 'OBJECT',
+                            properties: {vi: {type: 'STRING'}, en: {type: 'STRING'}},
+                            required: ['vi', 'en']
+                          }
+                        }
+                      },
+                      required: ['vi', 'en', 'en_in_sent', 'pos', 'note', 'examples']
+                    }
+                  }
+                },
+                required: ['phrases']
+              }
+            }
+          })
+        });
+        if (r.ok) {
+          const j = await r.json();
+          const raw = j.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (raw) data = JSON.parse(raw);
+        }
+      } else if (DASHBOARD_URL) {
+        const qs = new URLSearchParams({action: 'analyze', vi, en});
+        const r = await fetch(DASHBOARD_URL + (DASHBOARD_URL.includes('?') ? '&' : '?') + qs);
+        const j = await r.json();
+        if (j && j.ok && j.data) data = j.data;
+      }
+
+      if (data && Array.isArray(data.phrases) && data.phrases.length) {
+        saveAiCache(key, data.phrases);
+        return data.phrases;
+      }
+    } catch (e) {
+      console.warn('AI analyze error:', e);
+    } finally {
+      aiInFlight.delete(key);
+    }
+    return null;
+  })();
+
+  aiInFlight.set(key, task);
+  return task;
+}
+
+function positionTooltip(anchorEl) {
+  const tip = $('wordTooltip');
+  if (!anchorEl || tip.hidden) return;
+  const r = anchorEl.getBoundingClientRect();
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  let left = r.left + r.width / 2 - tw / 2;
+  left = Math.max(12, Math.min(window.innerWidth - tw - 12, left));
+  let top = r.top - th - 12;
+  if (top < 10) top = Math.min(window.innerHeight - th - 12, r.bottom + 12);
+  tip.style.left = Math.round(left) + 'px';
+  tip.style.top = Math.round(top) + 'px';
+}
+
+function renderTooltipContent(pid) {
+  const tip = $('wordTooltip');
+  const info = phraseMeta[pid];
+  if (!info) { tip.hidden = true; return; }
+
+  tip.replaceChildren();
+  const head = document.createElement('div'); head.className = 'tt-head';
+  const pair = document.createElement('div'); pair.className = 'tt-pair';
+
+  const viEl = document.createElement('span'); viEl.className = 'tt-vi'; viEl.textContent = info.vi;
+  pair.append(viEl);
+
+  if (info.en) {
+    const arrow = document.createElement('span'); arrow.textContent = '→'; arrow.style.color = 'var(--mute)';
+    const enEl = document.createElement('span'); enEl.className = 'tt-en'; enEl.textContent = info.en;
+    pair.append(arrow, enEl);
+  }
+  if (info.pos) {
+    const posEl = document.createElement('span'); posEl.className = 'tt-pos'; posEl.textContent = `(${info.pos})`;
+    pair.append(posEl);
+  }
+  head.append(pair);
+
+  if (pinnedPid === pid) {
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'tt-close';
+    closeBtn.type = 'button';
+    closeBtn.textContent = '×';
+    closeBtn.setAttribute('aria-label', 'Đóng');
+    closeBtn.onclick = ev => { ev.stopPropagation(); pinnedPid = null; setActivePhrase(null, null); };
+    head.append(closeBtn);
+  }
+  tip.append(head);
+
+  if (!info.ready) {
+    const ld = document.createElement('div');
+    ld.className = 'tt-loading';
+    ld.textContent = aiLoading ? '⏳ AI đang dịch & tạo câu ví dụ…' : 'Chưa tải được dữ liệu dịch.';
+    tip.append(ld);
+    return;
+  }
+
+  if (info.note) {
+    const noteEl = document.createElement('div');
+    noteEl.className = 'tt-note';
+    noteEl.textContent = info.note;
+    tip.append(noteEl);
+  }
+
+  if (Array.isArray(info.examples) && info.examples.length) {
+    const exTitle = document.createElement('div');
+    exTitle.className = 'tt-ex-title';
+    exTitle.textContent = 'Ví dụ / Examples';
+    tip.append(exTitle);
+
+    info.examples.slice(0, 2).forEach(ex => {
+      const box = document.createElement('div'); box.className = 'tt-ex';
+      const exVi = document.createElement('div'); exVi.className = 'tt-ex-vi'; exVi.textContent = '• ' + ex.vi;
+      const exEn = document.createElement('div'); exEn.className = 'tt-ex-en'; exEn.textContent = ex.en;
+      box.append(exVi, exEn);
+      tip.append(box);
+    });
+  }
+}
+
+function setActivePhrase(pid, anchorEl) {
+  clearTimeout(hideTipTimer);
+  document.querySelectorAll('.phrase.active, .en-phrase.active').forEach(el => el.classList.remove('active'));
+  const tip = $('wordTooltip');
+
+  if (!pid || !phraseMeta[pid]) {
+    activeAnchor = null;
+    tip.hidden = true;
+    return;
+  }
+
+  document.querySelectorAll(`[data-p="${CSS.escape(pid)}"]`).forEach(el => el.classList.add('active'));
+  activeAnchor = anchorEl || document.querySelector(`.phrase[data-p="${CSS.escape(pid)}"]`);
+  renderTooltipContent(pid);
+  tip.hidden = false;
+  positionTooltip(activeAnchor);
+}
+
+function scheduleHideTooltip() {
+  if (pinnedPid) return;
+  clearTimeout(hideTipTimer);
+  hideTipTimer = setTimeout(() => {
+    if (!pinnedPid) setActivePhrase(null, null);
+  }, 160);
+}
+
+$('wordTooltip').addEventListener('mouseenter', () => clearTimeout(hideTipTimer));
+$('wordTooltip').addEventListener('mouseleave', scheduleHideTooltip);
+$('wordTooltip').addEventListener('click', ev => ev.stopPropagation());
+window.addEventListener('resize', () => { if (activeAnchor && !$('wordTooltip').hidden) positionTooltip(activeAnchor); });
+window.addEventListener('scroll', () => { if (activeAnchor && !$('wordTooltip').hidden) positionTooltip(activeAnchor); }, {passive: true});
+
+function attachPhraseEvents(el, pid) {
+  el.addEventListener('mouseenter', () => {
+    clearTimeout(hideTipTimer);
+    if (!pinnedPid) setActivePhrase(pid, el);
+  });
+  el.addEventListener('mouseleave', scheduleHideTooltip);
+  el.addEventListener('click', ev => {
+    ev.stopPropagation();
+    if (pinnedPid === pid) {
+      pinnedPid = null;
+      setActivePhrase(null, null);
+    } else {
+      pinnedPid = pid;
+      setActivePhrase(pid, el);
+    }
+  });
+}
+
+function buildInteractiveSentence(words, enText, aiPhrases) {
+  const prevPinnedText = pinnedPid && phraseMeta[pinnedPid] ? cleanTok(phraseMeta[pinnedPid].vi) : null;
+  phraseMeta = {};
+  pinnedPid = null;
+  $('wordTooltip').hidden = true;
+
+  const normWords = words.map(cleanTok);
+  const entries = (aiPhrases || [])
+    .map(item => ({...item, viTokens: (item.vi || '').trim().split(/\s+/).map(cleanTok).filter(Boolean)}))
+    .filter(item => item.viTokens.length > 0);
+
+  const usedIdx = Array(words.length).fill(false);
+  const spansByStart = new Map();
+  const matchedPhrases = [];
+
+  entries.forEach((entry, idx) => {
+    const len = entry.viTokens.length;
+    for (let i = 0; i <= words.length - len; i++) {
+      let ok = true;
+      for (let k = 0; k < len; k++) {
+        if (usedIdx[i + k] || normWords[i + k] !== entry.viTokens[k]) { ok = false; break; }
+      }
+      if (ok) {
+        for (let k = 0; k < len; k++) usedIdx[i + k] = true;
+        const pid = 'p' + idx;
+        const viDisplay = words.slice(i, i + len).join(' ');
+        phraseMeta[pid] = {
+          vi: viDisplay,
+          en: entry.en || '',
+          enInSent: entry.en_in_sent || entry.en || '',
+          pos: entry.pos || '',
+          note: entry.note || '',
+          examples: entry.examples || [],
+          ready: true
+        };
+        spansByStart.set(i, {pid, end: i + len});
+        matchedPhrases.push({pid, enTarget: entry.en_in_sent || entry.en || ''});
+        break;
+      }
+    }
+  });
+
+  // 1. Dựng câu tiếng Việt (#sent)
+  const sentFrag = document.createDocumentFragment();
+  for (let i = 0; i < words.length; ) {
+    const grp = spansByStart.get(i);
+    if (grp) {
+      const pEl = document.createElement('span');
+      pEl.className = 'phrase';
+      pEl.dataset.p = grp.pid;
+      for (let j = i; j < grp.end; j++) {
+        pEl.append(Object.assign(document.createElement('span'), {className: 'w', textContent: words[j]}));
+      }
+      attachPhraseEvents(pEl, grp.pid);
+      sentFrag.append(pEl);
+      i = grp.end;
+    } else {
+      const pid = 'w' + i;
+      phraseMeta[pid] = {vi: words[i], en: '', pos: '', note: '', examples: [], ready: Boolean(aiPhrases)};
+      const pEl = document.createElement('span');
+      pEl.className = 'phrase';
+      pEl.dataset.p = pid;
+      pEl.append(Object.assign(document.createElement('span'), {className: 'w', textContent: words[i]}));
+      attachPhraseEvents(pEl, pid);
+      sentFrag.append(pEl);
+      i++;
+    }
+  }
+  $('sent').replaceChildren(sentFrag);
+
+  // 2. Dựng câu tiếng Anh (#en) & gắn liên kết 2 chiều
+  if (!enText) { $('en').textContent = ''; return; }
+  const enTargets = matchedPhrases
+    .filter(p => p.enTarget)
+    .sort((a, b) => b.enTarget.length - a.enTarget.length);
+
+  const ranges = [];
+  enTargets.forEach(({pid, enTarget}) => {
+    const rx = new RegExp(`(?<![\\p{L}\\p{N}])${escReg(enTarget)}(?![\\p{L}\\p{N}])`, 'giu');
+    let m;
+    while ((m = rx.exec(enText)) !== null) {
+      const s = m.index, e = s + m[0].length;
+      if (!ranges.some(r => s < r.e && e > r.s)) {
+        ranges.push({s, e, pid});
+        break;
+      }
+    }
+  });
+  ranges.sort((a, b) => a.s - b.s);
+
+  const enFrag = document.createDocumentFragment();
+  let cursor = 0;
+  ranges.forEach(({s, e, pid}) => {
+    if (s > cursor) enFrag.append(enText.slice(cursor, s));
+    const span = document.createElement('span');
+    span.className = 'en-phrase';
+    span.dataset.p = pid;
+    span.textContent = enText.slice(s, e);
+    attachPhraseEvents(span, pid);
+    enFrag.append(span);
+    cursor = e;
+  });
+  if (cursor < enText.length) enFrag.append(enText.slice(cursor));
+  $('en').replaceChildren(enFrag);
+
+  if (prevPinnedText) {
+    const foundPid = Object.keys(phraseMeta).find(id => cleanTok(phraseMeta[id].vi).includes(prevPinnedText));
+    if (foundPid) { pinnedPid = foundPid; setActivePhrase(foundPid, null); }
+  }
 }
 
 // ===== TRÒ CHƠI =====
@@ -212,9 +574,9 @@ const pool = () => $('pack').value == '*' ? Object.values(PACKS).flat() : PACKS[
 const levelOf = k => Math.min(5, Math.floor(k / PER_STAGE) + 1);
 function nearestLevel(w) { for (let d = 0; d < 5; d++) for (const l of [w + d, w - d]) if (l >= 1 && l <= 5 && pool().some(p => p[2] == l)) return l; return null; }
 function nextS() {
-  const k = made++, stage = levelOf(k), lv = nearestLevel(stage);   // nếu độ khó này chưa có câu thì lấy độ khó gần nhất
+  const k = made++, stage = levelOf(k), lv = nearestLevel(stage);
   let c = pool().filter(p => p[2] == lv && !used.has(p[0]));
-  if (!c.length) { pool().filter(p => p[2] == lv).forEach(p => used.delete(p[0])); c = pool().filter(p => p[2] == lv); }   // hết câu thì xáo lại
+  if (!c.length) { pool().filter(p => p[2] == lv).forEach(p => used.delete(p[0])); c = pool().filter(p => p[2] == lv); }
   const [v, en] = c[(Math.random() * c.length) | 0]; used.add(v);
   return {v, en, k, stage};
 }
@@ -225,14 +587,30 @@ function render() {
   exp = []; wmap = [];
   words.forEach(w => { const t = toks(w); wmap.push([exp.length, exp.length + t.length]); exp.push(...t); });
   st = exp.map(() => 0);
-  $('sent').replaceChildren(...words.map(w => Object.assign(document.createElement('span'), {className: 'w', textContent: w})));
-  $('en').textContent = cur.en; $('heard').textContent = '';
+
+  const cacheKey = `${cur.v.trim()}||${(cur.en || '').trim()}`;
+  const cached = aiMemCache.get(cacheKey) || null;
+  aiLoading = !cached && Boolean(GEMINI_API_KEY || DASHBOARD_URL);
+  buildInteractiveSentence(words, cur.en, cached);
+
+  if (!cached && cur.en && (GEMINI_API_KEY || DASHBOARD_URL)) {
+    const snapV = cur.v, snapEn = cur.en;
+    fetchSentenceAnalysis(snapV, snapEn).then(phrases => {
+      aiLoading = false;
+      if (cur && cur.v === snapV && cur.en === snapEn) {
+        buildInteractiveSentence(snapV.trim().split(/\s+/), snapEn, phrases || []);
+        paint(st, state === 'failed' || state === 'crashing' || state === 'over');
+      }
+    });
+  }
+
+  $('heard').textContent = '';
   const k = cur.k || 0;
   $('stg').textContent = state == 'idle' ? '' : (k >= PER_STAGE * 4 ? `Độ khó 5/5 · không giới hạn · câu ${k - PER_STAGE * 4 + 1}` : `Độ khó ${cur.stage}/5 · câu ${k % PER_STAGE + 1}/${PER_STAGE}`) + ` · ${words.length} từ`;
   $('play').disabled = true; $('retry').hidden = true; $('skip').hidden = true;
 }
 function paint(flags, finalFail) {
-  [...$('sent').children].forEach((el, i) => {
+  [...$('sent').querySelectorAll('.w')].forEach((el, i) => {
     const [a, b] = wmap[i] || [0, 0]; let ok = true; for (let k = a; k < b; k++) if (!flags[k]) ok = false;
     el.className = 'w' + (b > a && ok ? ' ok' : b > a && finalFail ? ' bad' : '');
   });
@@ -244,7 +622,7 @@ function evaluate(alts) {
   return {st: b.s, all: exp.length - b.n <= allow(), text: b.text};
 }
 
-// ===== NHẬN GIỌNG CỤC BỘ (hynt/Zipformer-30M-RNNT-6000h chạy bằng onnxruntime-web) =====
+// ===== NHẬN GIỌNG CỤC BỘ =====
 const MODEL = './models/vi/', PARTS = {'encoder.int8.onnx': 3};
 let recog = null, micCtx = null, listening = false, seg = null, pre = [], busy = false, wantFinal = false, floor = 0.004, acc = [], accLen = 0;
 async function loadFile(n) {
@@ -279,8 +657,8 @@ function onChunk(ch) {
     seg = {chunks: pre, len, lastVoice: len, lastDec: 0, final: false}; pre = [];
   } else { seg.chunks.push(ch); seg.len += ch.length; if (voiced) seg.lastVoice = seg.len; }
   if (seg.final) return;
-  if (seg.len - seg.lastVoice >= TIMING.pause * 16000 || seg.len >= TIMING.maxSpeech * 16000) { seg.final = true; runDecode(true); }   // im lặng đủ lâu = nói xong
-  else if (seg.len - seg.lastDec >= 9600) runDecode(false);                                              // nhận tạm mỗi 0,6 giây
+  if (seg.len - seg.lastVoice >= TIMING.pause * 16000 || seg.len >= TIMING.maxSpeech * 16000) { seg.final = true; runDecode(true); }
+  else if (seg.len - seg.lastDec >= 9600) runDecode(false);
 }
 async function runDecode(final) {
   if (busy) { if (final) wantFinal = true; return; }
@@ -290,7 +668,7 @@ async function runDecode(final) {
   let txt = ''; try { txt = await recog.decode(all); } catch (e) { console.error(e); }
   busy = false;
   if (state != 'waiting' || seg !== s) return;
-  if (final && !txt) { seg = null; pre = []; return; }   // chỉ là tiếng ồn: tiếp tục nghe
+  if (final && !txt) { seg = null; pre = []; return; }
   handle(txt, final);
   if (wantFinal && state == 'waiting' && seg === s && !final) { wantFinal = false; runDecode(true); }
 }
@@ -320,10 +698,9 @@ function speakSystem(text, done) {
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text); u.voice = viVoice(); u.lang = 'vi-VN'; u.rate = .85;
   let fin = false; const end = () => { if (!fin) { fin = true; clearTimeout(t); if (done) done(); } };
-  const t = setTimeout(end, 6000 + text.length * 150);   // đề phòng trình duyệt không báo "đọc xong"
+  const t = setTimeout(end, 6000 + text.length * 150);
   u.onend = u.onerror = end; speechSynthesis.speak(u);
 }
-// Tên file audio = 12 ký tự đầu của SHA-1 của câu đã chuẩn hóa (cùng công thức với tools/gen_audio.py)
 async function keyOf(t) {
   const n = t.normalize('NFC').toLowerCase().split(/\s+/).filter(Boolean).join(' ');
   const h = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(n));
@@ -336,7 +713,7 @@ function playFile(url, done) {
     const a = new Audio(url); curAudio = a; let fin = false;
     const end = () => { if (!fin) { fin = true; if (done) done(); } };
     a.onended = end; a.onerror = () => resolve(false);
-    a.onplaying = () => { resolve(true); setTimeout(end, 60000); };   // đề phòng không nhận được sự kiện "phát xong"
+    a.onplaying = () => { resolve(true); setTimeout(end, 60000); };
     a.play().catch(() => resolve(false));
   });
 }
@@ -346,7 +723,7 @@ async function speak(text, done) {
   if (region != 'sys') {
     try { const key = await keyOf(text); for (const ext of ['mp3', 'wav']) if (await playFile(`./audio/${region}-${$('gender').value}/${key}.${ext}`, done)) return; } catch (e) {}
   }
-  speakSystem(text, done);   // chưa có file audio: dùng giọng đọc của trình duyệt
+  speakSystem(text, done);
 }
 function startSpeaking() {
   state = 'waiting'; timer = TIMING.base + TIMING.perWord * exp.length; lastSec = -1;
@@ -432,7 +809,7 @@ function frame(t) {
 }
 
 // ===== TÊN NGƯỜI CHƠI VÀ BẢNG XẾP HẠNG =====
-let playerName = '';   // không lưu lại: mỗi lần mở trang đều hỏi tên mới
+let playerName = '';
 function askName() {
   $('nameInput').value = playerName; $('nameInput').className = '';
   $('nameModal').hidden = false; $('app').inert = true; setTimeout(() => $('nameInput').focus(), 50);
@@ -443,7 +820,7 @@ function setName() {
   playerName = n; $('hello').textContent = 'Xin chào, ' + n + ' · Hello, ' + n;
   $('nameModal').hidden = true; $('app').inert = false;
 }
-async function dash(params) {   // gọi Google Apps Script (ghi điểm hoặc lấy bảng xếp hạng); lỗi thì trả về null
+async function dash(params) {
   if (!DASHBOARD_URL) return null;
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 15000);
   try {
@@ -484,7 +861,7 @@ async function openBoard() {
   showBoard('Đang tải… / Loading…');
   renderBoard(await dash({action: 'top'}), null);
 }
-async function finishRun() {   // ghi điểm của lượt Thử thách vừa kết thúc rồi hiện bảng xếp hạng
+async function finishRun() {
   if (practiceMode || score < 1 || !DASHBOARD_URL) return;
   showBoard('Đang ghi điểm… / Saving your score…');
   const d = await dash({action: 'submit', name: playerName, score});
@@ -518,8 +895,14 @@ $('tone').onchange = () => { if (cur) render(); };
 $('nameOk').onclick = setName; $('nameInput').onkeydown = e => { if (e.key == 'Enter') setName(); };
 $('rename').onclick = askName; $('lbBtn').onclick = openBoard; $('lbBtn').hidden = !DASHBOARD_URL;
 $('lbClose').onclick = closeBoard; $('lbModal').onclick = e => { if (e.target === $('lbModal')) closeBoard(); };
-document.addEventListener('keydown', e => { if (e.key == 'Escape' && !$('lbModal').hidden) closeBoard(); });
-for (const id of ['voice', 'gender']) {   // nhớ lựa chọn giọng của người học
+document.addEventListener('click', () => { if (pinnedPid) { pinnedPid = null; setActivePhrase(null, null); } });
+document.addEventListener('keydown', e => {
+  if (e.key == 'Escape') {
+    if (pinnedPid) { pinnedPid = null; setActivePhrase(null, null); }
+    else if (!$('lbModal').hidden) closeBoard();
+  }
+});
+for (const id of ['voice', 'gender']) {
   try { const v = localStorage.getItem('ndn-' + id); if (v) $(id).value = v; } catch (e) {}
   $(id).onchange = () => { $('gender').disabled = $('voice').value == 'sys'; try { localStorage.setItem('ndn-' + id, $(id).value); } catch (e) {} };
 }
