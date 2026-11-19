@@ -80,7 +80,8 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
 .tt-ex{background:#f8fafc;border-left:3px solid var(--hl);border-radius:0 8px 8px 0;padding:6px 9px;margin-top:5px}
 .tt-ex-vi{font-weight:600;color:var(--ink);font-size:13px}
 .tt-ex-en{color:#334155;font-size:12.5px;margin-top:1px}
-.tt-loading{color:var(--mute);font-size:13px;padding:4px 0}
+.tt-loading{color:var(--mute);font-size:13px;padding:6px 0 2px}
+.tt-err{color:#b91c1c;font-size:12.5px;padding:6px 0 2px}
 </style>
 </head>
 <body>
@@ -212,7 +213,7 @@ async function loadSheet() {
 }
 
 // ===== AI DỊCH TỰ ĐỘNG, HIGHLIGHT 2 CHIỀU & TOOLTIP VÍ DỤ =====
-const AI_CACHE_KEY = 'ndn-ai-phrases-v1';
+const AI_CACHE_KEY = 'ndn-ai-phrases-v2';
 const aiMemCache = new Map();
 const aiInFlight = new Map();
 try {
@@ -228,93 +229,67 @@ function saveAiCache(key, value) {
   } catch (e) {}
 }
 
-let phraseMeta = {}, pinnedPid = null, activeAnchor = null, hideTipTimer = null, aiLoading = false;
+let phraseMeta = {}, pinnedPid = null, activePid = null, activeAnchor = null, hideTipTimer = null, aiLoading = false, aiError = '';
 const cleanTok = w => w.normalize('NFC').toLowerCase().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
 const escReg = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 async function fetchSentenceAnalysis(vi, en) {
   const key = `${vi.trim()}||${en.trim()}`;
-  if (aiMemCache.has(key)) return aiMemCache.get(key);
+  if (aiMemCache.has(key)) return { phrases: aiMemCache.get(key), error: '' };
   if (aiInFlight.has(key)) return aiInFlight.get(key);
 
   const task = (async () => {
     try {
       let data = null;
+      let errMsg = '';
+
       if (GEMINI_API_KEY) {
         const prompt = `Phân tích câu song ngữ Việt - Anh sau thành các từ/cụm từ có nghĩa tự nhiên theo thứ tự câu tiếng Việt.
 Câu tiếng Việt: "${vi}"
 Câu tiếng Anh: "${en}"
-
-Yêu cầu trả về JSON chuẩn xác:
-- vi: cụm từ tiếng Việt trích đúng từ câu trên (ghép từ ghép như "Thư viện", "mở cửa", "lúc mấy giờ").
-- en: nghĩa tiếng Anh ngắn gọn của cụm từ đó (ví dụ: "library", "open", "what time").
-- en_in_sent: đoạn chữ tương ứng trích Y HỆT từ câu tiếng Anh đã cho để bôi đậm (ví dụ: "the library", "open", "What time"; nếu là từ đệm như "ạ" không có trong câu Anh thì để chuỗi rỗng "").
-- pos: từ loại ngắn gọn (ví dụ: "danh từ", "động từ", "cụm từ hỏi").
-- note: giải thích cách dùng cực ngắn (1 câu ngắn).
-- examples: mảng gồm đúng 2 câu ví dụ khác nhau có sử dụng từ/cụm từ đó, mỗi ví dụ có "vi" (tiếng Việt) và "en" (tiếng Anh).`;
-
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
+Trả về JSON gồm mảng "phrases", mỗi phần tử gồm: vi, en, en_in_sent, pos, note, examples (mảng 2 object {"vi","en"}).`;
+        const keyEnc = encodeURIComponent(GEMINI_API_KEY);
+        const url = GEMINI_API_KEY.startsWith('AQ.')
+          ? `https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-2.5-flash:generateContent?key=${keyEnc}`
+          : `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${keyEnc}`;
         const r = await fetch(url, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
-            contents: [{parts: [{text: prompt}]}],
-            generationConfig: {
-              temperature: 0.2,
-              responseMimeType: 'application/json',
-              responseSchema: {
-                type: 'OBJECT',
-                properties: {
-                  phrases: {
-                    type: 'ARRAY',
-                    items: {
-                      type: 'OBJECT',
-                      properties: {
-                        vi: {type: 'STRING'},
-                        en: {type: 'STRING'},
-                        en_in_sent: {type: 'STRING'},
-                        pos: {type: 'STRING'},
-                        note: {type: 'STRING'},
-                        examples: {
-                          type: 'ARRAY',
-                          items: {
-                            type: 'OBJECT',
-                            properties: {vi: {type: 'STRING'}, en: {type: 'STRING'}},
-                            required: ['vi', 'en']
-                          }
-                        }
-                      },
-                      required: ['vi', 'en', 'en_in_sent', 'pos', 'note', 'examples']
-                    }
-                  }
-                },
-                required: ['phrases']
-              }
-            }
+            contents: [{role: 'user', parts: [{text: prompt}]}],
+            generationConfig: {temperature: 0.2, responseMimeType: 'application/json'}
           })
         });
         if (r.ok) {
           const j = await r.json();
-          const raw = j.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (raw) data = JSON.parse(raw);
+          const raw = j.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          data = JSON.parse(raw.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim());
+        } else {
+          errMsg = `HTTP ${r.status}`;
         }
       } else if (DASHBOARD_URL) {
         const qs = new URLSearchParams({action: 'analyze', vi, en});
         const r = await fetch(DASHBOARD_URL + (DASHBOARD_URL.includes('?') ? '&' : '?') + qs);
         const j = await r.json();
-        if (j && j.ok && j.data) data = j.data;
+        if (j && j.ok && j.data) {
+          data = j.data;
+        } else if (j && j.top && !j.data) {
+          errMsg = 'Apps Script chưa cập nhật Phiên bản mới (vẫn đang chạy bản cũ).';
+        } else {
+          errMsg = (j && j.error) || 'Không nhận được phản hồi từ Apps Script.';
+        }
       }
 
       if (data && Array.isArray(data.phrases) && data.phrases.length) {
         saveAiCache(key, data.phrases);
-        return data.phrases;
+        return { phrases: data.phrases, error: '' };
       }
+      return { phrases: null, error: errMsg || 'AI chưa trả về dữ liệu.' };
     } catch (e) {
-      console.warn('AI analyze error:', e);
+      return { phrases: null, error: e.message || 'Lỗi kết nối mạng.' };
     } finally {
       aiInFlight.delete(key);
     }
-    return null;
   })();
 
   aiInFlight.set(key, task);
@@ -369,10 +344,15 @@ function renderTooltipContent(pid) {
   tip.append(head);
 
   if (!info.ready) {
-    const ld = document.createElement('div');
-    ld.className = 'tt-loading';
-    ld.textContent = aiLoading ? '⏳ AI đang dịch & tạo câu ví dụ…' : 'Chưa tải được dữ liệu dịch.';
-    tip.append(ld);
+    const msg = document.createElement('div');
+    if (aiLoading) {
+      msg.className = 'tt-loading';
+      msg.textContent = '⏳ AI đang dịch & tạo câu ví dụ…';
+    } else {
+      msg.className = 'tt-err';
+      msg.textContent = '⚠️ ' + (aiError || 'Chưa tải được bản dịch.');
+    }
+    tip.append(msg);
     return;
   }
 
@@ -403,6 +383,7 @@ function setActivePhrase(pid, anchorEl) {
   clearTimeout(hideTipTimer);
   document.querySelectorAll('.phrase.active, .en-phrase.active').forEach(el => el.classList.remove('active'));
   const tip = $('wordTooltip');
+  activePid = pid || null;
 
   if (!pid || !phraseMeta[pid]) {
     activeAnchor = null;
@@ -450,13 +431,18 @@ function attachPhraseEvents(el, pid) {
 }
 
 function buildInteractiveSentence(words, enText, aiPhrases) {
-  const prevPinnedText = pinnedPid && phraseMeta[pinnedPid] ? cleanTok(phraseMeta[pinnedPid].vi) : null;
+  const prevPid = pinnedPid || activePid;
+  const prevWordText = prevPid && phraseMeta[prevPid] ? cleanTok(phraseMeta[prevPid].vi) : null;
+  const wasPinned = Boolean(pinnedPid);
+
   phraseMeta = {};
   pinnedPid = null;
+  activePid = null;
   $('wordTooltip').hidden = true;
 
+  const hasValidAi = Array.isArray(aiPhrases) && aiPhrases.length > 0;
   const normWords = words.map(cleanTok);
-  const entries = (aiPhrases || [])
+  const entries = (hasValidAi ? aiPhrases : [])
     .map(item => ({...item, viTokens: (item.vi || '').trim().split(/\s+/).map(cleanTok).filter(Boolean)}))
     .filter(item => item.viTokens.length > 0);
 
@@ -507,7 +493,7 @@ function buildInteractiveSentence(words, enText, aiPhrases) {
       i = grp.end;
     } else {
       const pid = 'w' + i;
-      phraseMeta[pid] = {vi: words[i], en: '', pos: '', note: '', examples: [], ready: Boolean(aiPhrases)};
+      phraseMeta[pid] = {vi: words[i], en: '', pos: '', note: '', examples: [], ready: false};
       const pEl = document.createElement('span');
       pEl.className = 'phrase';
       pEl.dataset.p = pid;
@@ -554,9 +540,12 @@ function buildInteractiveSentence(words, enText, aiPhrases) {
   if (cursor < enText.length) enFrag.append(enText.slice(cursor));
   $('en').replaceChildren(enFrag);
 
-  if (prevPinnedText) {
-    const foundPid = Object.keys(phraseMeta).find(id => cleanTok(phraseMeta[id].vi).includes(prevPinnedText));
-    if (foundPid) { pinnedPid = foundPid; setActivePhrase(foundPid, null); }
+  if (prevWordText) {
+    const foundPid = Object.keys(phraseMeta).find(id => cleanTok(phraseMeta[id].vi).split(/\s+/).includes(prevWordText));
+    if (foundPid) {
+      if (wasPinned) pinnedPid = foundPid;
+      setActivePhrase(foundPid, null);
+    }
   }
 }
 
@@ -590,15 +579,17 @@ function render() {
 
   const cacheKey = `${cur.v.trim()}||${(cur.en || '').trim()}`;
   const cached = aiMemCache.get(cacheKey) || null;
+  aiError = '';
   aiLoading = !cached && Boolean(GEMINI_API_KEY || DASHBOARD_URL);
   buildInteractiveSentence(words, cur.en, cached);
 
   if (!cached && cur.en && (GEMINI_API_KEY || DASHBOARD_URL)) {
     const snapV = cur.v, snapEn = cur.en;
-    fetchSentenceAnalysis(snapV, snapEn).then(phrases => {
-      aiLoading = false;
+    fetchSentenceAnalysis(snapV, snapEn).then(res => {
       if (cur && cur.v === snapV && cur.en === snapEn) {
-        buildInteractiveSentence(snapV.trim().split(/\s+/), snapEn, phrases || []);
+        aiLoading = false;
+        aiError = res.error || '';
+        buildInteractiveSentence(snapV.trim().split(/\s+/), snapEn, res.phrases);
         paint(st, state === 'failed' || state === 'crashing' || state === 'over');
       }
     });
